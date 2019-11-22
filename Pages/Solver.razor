@@ -1,0 +1,64 @@
+@page "/solver"
+@inject HttpClient Http
+
+<h1>TSPSolver</h1>
+
+<p>heeeeeeeeeello</p>
+
+@if (specs == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <label>
+        TSP specification:
+        <select class="form-control" @onchange="TSPSpecSelected">
+                @foreach(var spec in specs)
+                {
+                    <option>@spec.Name</option>                
+                }
+        </select>
+    </label>
+    <br />
+    <BECanvas @ref="scene" Width="500" Height="500"></BECanvas>
+}
+
+@code {
+    public class SerializableLocation
+    {
+        public double X { get; set; }
+        public double Y { get; set; }
+
+        public static Location ToDomain(SerializableLocation location)
+        {
+            return new Location(location.X, location.Y);
+        }
+
+        public override string ToString()
+        {
+            return X + ", " + Y;
+        }
+    }
+
+    public class SerializabelTSPSpec
+    {
+        public string Name { get; set; }
+
+        public int[] OptTour { get; set; }
+
+        public SerializableLocation[] Cities { get; set; }
+
+        public static TSPSpec ToDomain(SerializabelTSPSpec spec)
+        {
+            return new TSPSpec(spec.Name, spec.OptTour, spec.Cities.Select(SerializableLocation.ToDomain).ToList());
+        }
+
+        public override string ToString()
+        {
+            var coordinates = string.Join(",", (IEnumerable<SerializableLocation>)Cities);
+            return $"{Name} ({Cities.Length} cites): ({coordinates})";
+        }
+    }
+
+    TSPSpec[] specs;
