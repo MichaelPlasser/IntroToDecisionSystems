@@ -62,3 +62,64 @@ else
     }
 
     TSPSpec[] specs;
+    TSPSpec selectedTSPSpec;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var serverSpecs = await Http.GetJsonAsync<SerializabelTSPSpec[]>("actual-data/tspspecs.json");
+        Console.WriteLine($"{string.Join(Environment.NewLine,(IEnumerable<SerializabelTSPSpec>)serverSpecs)}");
+        specs = serverSpecs.Select(SerializabelTSPSpec.ToDomain).OrderBy(spec => spec.Cities.Count).ToArray();
+        selectedTSPSpec = specs.FirstOrDefault();
+    }
+
+    private void TSPSpecSelected(ChangeEventArgs e)
+    {
+        var specName = (string)e.Value;
+        Console.WriteLine($"Selected Spec: {specName}");
+        selectedTSPSpec = specs.Single(spec => spec.Name == specName);
+    }
+
+    BECanvasComponent scene;
+
+    override protected async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (scene == null)
+        {
+            return;
+        }
+
+        var context = await scene.CreateCanvas2DAsync();
+        await context.ClearRectAsync(0, 0, scene.Width, scene.Height);
+
+        if (selectedTSPSpec == null)
+        {
+            return;
+        }
+
+        var minX = selectedTSPSpec.Cities.Select(location => location.X).Min();
+        var minY = selectedTSPSpec.Cities.Select(location => location.Y).Min();
+        var maxX = selectedTSPSpec.Cities.Select(location => location.X).Max();
+        var maxY = selectedTSPSpec.Cities.Select(location => location.Y).Max();
+
+        Location GetSceneCoordinates(Location city)
+        {
+            const int padding = 10;
+            var yRatio = (scene.Height - 2 * padding) / (maxY - minY);
+            var xRatio = (scene.Width - 2 * padding) / (maxX - minX);
+
+            var y = (city.Y - minY) * yRatio + padding;
+            var x = (city.X - minX) * xRatio + padding;
+
+            return new Location(x, y);
+        }
+
+        foreach (var city in selectedTSPSpec.Cities.Select(GetSceneCoordinates))
+        {
+            await context.BeginPathAsync();
+            await context.MoveToAsync(city.X, city.Y);
+            await context.ArcAsync(city.X, city.Y, 2, 0, Math.PI * 2, true);
+            await context.FillAsync();
+        }
+    }
+
+}
